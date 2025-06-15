@@ -2,6 +2,7 @@ const ping = require('ping');
 
 const host = process.argv[2] || 'google.com';
 const threshold = process.argv[3] || 50;
+let DelaySpikesThreshold = process.argv[4] || 100;
 
 let totalRequests = 0;
 let belowThreshold = 0;
@@ -9,6 +10,8 @@ let aboveThreshold = 0;
 let minRequestTime = 999999;
 let maxRequestTime = 0;
 let timeouts = 0;
+let lastRequestTime = 0;
+let delaySpikes = 0;
 
 function logIfSlow(pingTime) {
   if (pingTime > threshold) {
@@ -30,6 +33,11 @@ async function monitor() {
       totalRequests++;
 
       const time = res.time;
+
+      if (lastRequestTime !== 0 && (time - lastRequestTime) > DelaySpikesThreshold) {
+        delaySpikes++;
+      }
+      lastRequestTime = time
 
       if (time < minRequestTime) minRequestTime = time;
       if (time > maxRequestTime) maxRequestTime = time;
@@ -61,6 +69,7 @@ function exitHandler() {
   console.log(`Requests sent: ${totalRequests}`);
   console.log(`Below threshold (${threshold} ms): ${belowThreshold}`);
   console.log(`Above threshold (${threshold} ms): ${aboveThreshold}`);
+  console.log(`DelaySpikes (${DelaySpikesThreshold} ms): ${delaySpikes}`);
   console.log(`Timeouts: ${timeouts}`);
   console.log(`Max request time: ${maxRequestTime}`)
   console.log(`Min request time: ${minRequestTime === 999999 ? "0" : minRequestTime}`)
@@ -77,5 +86,6 @@ let startDate = new Date()
 console.log(`Probe started ${startDate}`);
 console.log(`Probe host: ${host}`)
 console.log(`Probe threshold: ${threshold} ms`)
+console.log(`Probe DelaySpike threshold: ${DelaySpikesThreshold} ms`)
 console.log(`---- Start ----`)
 monitor();
